@@ -61,7 +61,27 @@ class AppConfig:
         return not any(ignored in parts for ignored in self.ignored_directories)
 
 
-DEFAULT_CONFIG = AppConfig(
-    search_roots=[Path.home()],
-    ignored_directories=[".git", "node_modules", "__pycache__"],
-)
+def _default_config_path() -> Optional[Path]:
+    """Return the path to the packaged example configuration, if it exists."""
+
+    candidate = Path(__file__).resolve().parent.parent / "example_config.yaml"
+    return candidate if candidate.exists() else None
+
+
+def _load_default_config() -> AppConfig:
+    """Load the default configuration bundled with the project."""
+
+    example_path = _default_config_path()
+    if example_path:
+        try:
+            return AppConfig.from_yaml(example_path)
+        except Exception:  # noqa: BLE001
+            pass
+    return AppConfig(
+        search_roots=[Path.home()],
+        ignored_directories=[".git", "node_modules", "__pycache__"],
+    )
+
+
+DEFAULT_CONFIG = _load_default_config()
+DEFAULT_CONFIG_PATH = _default_config_path()
