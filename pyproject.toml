@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dossierhelper"
+version = "0.1.0"
+description = "macOS dossier artifact discovery and classification tool"
+readme = "README.md"
+authors = [{name = "Your Name"}]
+requires-python = ">=3.10"
+dependencies = [
+    "python-dateutil>=2.8.2",
+    "rich>=13.5.2",
+    "pyyaml>=6.0",
+    "pdfminer.six>=20221105",
+]
+
+[project.optional-dependencies]
+mac = [
+    "pyobjc>=9.0",
+]
+
+[project.scripts]
+dossierhelper = "dossierhelper.gui:main"
