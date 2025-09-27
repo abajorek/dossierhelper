@@ -21,7 +21,7 @@ A macOS-focused helper application to discover, classify, and report on tenure a
 * **Three-pass discovery pipeline** that starts with a fast surface scan, performs deeper metadata and text extraction, and culminates in a detailed reporting pass.
 * **Rule-based classification** driven by the unit-provided tenure & promotion matrix for Teaching, Service, Advising, Forms, and Scholarly/Creative artifacts.
 * **macOS Finder tag integration** to apply consistent color/label tags that mirror dossier destinations.
-* **Tkinter desktop UI** that allows you to choose search roots, limit scans by calendar year, and launch each pass individually or in sequence.
+* **Tkinter desktop UI** that allows you to choose search roots, limit scans by calendar year, launch each pass individually or in sequence, and watch a progress console full of dossier stats and delightfully retro quips.
 * **Extensible metadata extraction** with hooks for Spotlight (`mdls`) data, PDF text parsing, and custom author-hour annotations.
 
 ## Getting Started
@@ -44,7 +44,7 @@ A macOS-focused helper application to discover, classify, and report on tenure a
 
 ## Configuration
 
-The application loads optional YAML configuration files that define search roots, ignored directories, and author metadata. See [`example_config.yaml`](example_config.yaml) for a template.
+The application loads optional YAML configuration files that define search roots, ignored directories, and author metadata. A bundled `example_config.yaml` is applied by default in the GUI so you have a ready-to-go starting point, and you can swap in your own file at any time. See [`example_config.yaml`](example_config.yaml) for the template contents.
 
 ## Development Notes
 
