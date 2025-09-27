@@ -15,7 +15,7 @@ from tkinter import filedialog, messagebox, scrolledtext
 from rich.console import Console
 
 from .config import AppConfig, DEFAULT_CONFIG, DEFAULT_CONFIG_PATH
-from .pipeline import DossierPipeline, ProgressEvent
+from .pipeline import DossierPipeline, ProgressEvent, RunAllResult
 
 console = Console()
 
@@ -148,7 +148,20 @@ class Application(tk.Tk):
                         "Pass 2 complete",
                         f"Analyzed {len(result)} artifacts. Cue the RedLetterMedia 'How embarrassing!' stinger for every misfiled folder.",
                     )
-                elif stage in {"pass3", "all"} and isinstance(result, Path):
+                elif stage == "all" and isinstance(result, RunAllResult):
+                    messagebox.showinfo(
+                        "Pass 1 complete",
+                        f"Identified {result.pass_one_count} candidate artifacts. Strong Bad approves this deluxe paper shuffling session!",
+                    )
+                    messagebox.showinfo(
+                        "Pass 2 complete",
+                        f"Analyzed {result.pass_two_count} artifacts. Cue the RedLetterMedia 'How embarrassing!' sting for every misfiled folder.",
+                    )
+                    messagebox.showinfo(
+                        "Report generated",
+                        f"Report saved to {result.report_path}. It's like a VHS training tape come to life, but with way better metadata.",
+                    )
+                elif stage == "pass3" and isinstance(result, Path):
                     messagebox.showinfo(
                         "Report generated",
                         f"Report saved to {result}. It's like a VHS training tape come to life, but with way better metadata.",
@@ -166,15 +179,20 @@ class Application(tk.Tk):
     def _queue_progress(self, event: ProgressEvent) -> None:
         details = event.message
         if event.scanned_count is not None and event.total_candidates is not None:
-            details += f" | Scanned: {event.scanned_count}, Candidates: {event.total_candidates}"
+            details += f" | Progress: {event.scanned_count}/{event.total_candidates}"
         elif event.scanned_count is not None:
             details += f" | Processed: {event.scanned_count}"
+        if event.eta_seconds is not None:
+            minutes, seconds = divmod(int(max(event.eta_seconds, 0)), 60)
+            details += f" | ETA: {minutes:02d}:{seconds:02d}"
         if event.bucket_totals:
             bucket_summary = ", ".join(f"{bucket}: {count}" for bucket, count in sorted(event.bucket_totals.items()))
             details += f" | Buckets => {bucket_summary}"
         if event.finder_tagged is not None:
             tag_status = "Finder tag locked in" if event.finder_tagged else "Finder tag skipped"
             details += f" | {tag_status}"
+        elif event.stage == "pass2" and event.finder_tagged is None:
+            details += " | Finder tagging disabled"
         if event.stage == "pass2" and event.bucket == "Unclassified":
             details += " | Whoops! Somebody call Mike Stoklasa because that one's getting the 'How embarrassing!' cut."
         self._queue_log(details)
