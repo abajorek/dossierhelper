@@ -8,8 +8,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, Iterator, List, Optional
 
+from time import perf_counter
+
 from rich.console import Console
-from rich.progress import Progress
 
 from . import classifier
 from .classifier import ClassificationResult
@@ -38,6 +39,14 @@ class ProgressEvent:
     bucket: Optional[str] = None
     bucket_totals: Optional[dict[str, int]] = None
     finder_tagged: Optional[bool] = None
+    eta_seconds: Optional[float] = None
+
+
+@dataclass
+class RunAllResult:
+    report_path: Path
+    pass_one_count: int
+    pass_two_count: int
 
 
 class DossierPipeline:
@@ -96,37 +105,44 @@ class DossierPipeline:
         enriched: List[Artifact] = []
         artifacts_list = list(artifacts)
         bucket_totals: Counter[str] = Counter()
-        with Progress() as progress:
-            task = progress.add_task("Analyzing artifacts", total=len(artifacts_list))
-            for index, artifact in enumerate(artifacts_list, start=1):
-                meta = gather_metadata(artifact.path)
-                artifact.metadata = meta.raw
-                artifact.text = extract_text(artifact.path)
-                artifact.classification = classifier.classify(artifact.path, metadata=meta.raw, text=artifact.text)
-                artifact.hours_spent = _estimate_hours(artifact, self.config.metadata)
-                bucket = "Unclassified"
-                if artifact.classification:
-                    bucket = artifact.classification.portfolio_destination
-                bucket_totals[bucket] += 1
-                finder_tagged = False
-                if apply_tags and artifact.classification:
-                    desired_tags = _finder_tags_for(artifact.classification)
-                    write_finder_tags(artifact.path, desired_tags)
-                    updated_tags = read_finder_tags(artifact.path)
-                    finder_tagged = all(tag in updated_tags for tag in desired_tags)
-                enriched.append(artifact)
-                if progress_callback:
-                    progress_callback(
-                        ProgressEvent(
-                            stage="pass2",
-                            message=f"Sorted {artifact.path.name} into {bucket}.",
-                            scanned_count=index,
-                            bucket=bucket,
-                            bucket_totals=dict(bucket_totals),
-                            finder_tagged=finder_tagged if apply_tags else None,
-                        )
+        total_candidates = len(artifacts_list)
+        start_time = perf_counter()
+        for index, artifact in enumerate(artifacts_list, start=1):
+            meta = gather_metadata(artifact.path)
+            artifact.metadata = meta.raw
+            artifact.text = extract_text(artifact.path)
+            artifact.classification = classifier.classify(artifact.path, metadata=meta.raw, text=artifact.text)
+            artifact.hours_spent = _estimate_hours(artifact, self.config.metadata)
+            bucket = "Unclassified"
+            if artifact.classification:
+                bucket = artifact.classification.portfolio_destination
+            bucket_totals[bucket] += 1
+            finder_tagged = False
+            if apply_tags and artifact.classification:
+                desired_tags = _finder_tags_for(artifact.classification)
+                write_finder_tags(artifact.path, desired_tags)
+                updated_tags = read_finder_tags(artifact.path)
+                finder_tagged = all(tag in updated_tags for tag in desired_tags)
+            enriched.append(artifact)
+            eta_seconds = None
+            elapsed = perf_counter() - start_time
+            if progress_callback:
+                if index and elapsed > 0:
+                    remaining = total_candidates - index
+                    if remaining > 0:
+                        eta_seconds = (elapsed / index) * remaining
+                progress_callback(
+                    ProgressEvent(
+                        stage="pass2",
+                        message=f"Sorted {artifact.path.name} into {bucket}.",
+                        scanned_count=index,
+                        total_candidates=total_candidates,
+                        bucket=bucket,
+                        bucket_totals=dict(bucket_totals),
+                        finder_tagged=finder_tagged if apply_tags else None,
+                        eta_seconds=eta_seconds,
                     )
-                progress.advance(task)
+                )
         return enriched
 
     def pass_three_report(
@@ -174,7 +190,7 @@ class DossierPipeline:
         year: Optional[int] = None,
         apply_tags: bool = True,
         progress_callback: Optional[Callable[[ProgressEvent], None]] = None,
-    ) -> Path:
+    ) -> RunAllResult:
         artifacts = self.pass_one_surface_scan(year=year, progress_callback=progress_callback)
         enriched = self.pass_two_deep_analysis(
             artifacts,
@@ -192,7 +208,11 @@ class DossierPipeline:
             )
         else:
             reporting_path = self.pass_three_report(enriched, progress_callback=progress_callback)
-        return reporting_path
+        return RunAllResult(
+            report_path=reporting_path,
+            pass_one_count=len(artifacts),
+            pass_two_count=len(enriched),
+        )
 
 
 def _finder_tags_for(result: ClassificationResult) -> List[str]:
