@@ -136,6 +136,17 @@ class Application(tk.Tk):
         def worker() -> None:
             try:
                 result = func()
+            except Exception as exc:  # noqa: BLE001
+                console.log(f"[red]Error running pipeline: {exc}")
+
+                def handle_error() -> None:
+                    messagebox.showerror("Pipeline error", str(exc))
+                    self.status_var.set("Ready")
+
+                self.after(0, handle_error)
+                return
+
+            def handle_success() -> None:
                 if stage == "pass1" and isinstance(result, list):
                     self._pass_one_results = result  # type: ignore[attr-defined]
                     messagebox.showinfo(
@@ -166,11 +177,9 @@ class Application(tk.Tk):
                         "Report generated",
                         f"Report saved to {result}. It's like a VHS training tape come to life, but with way better metadata.",
                     )
-            except Exception as exc:  # noqa: BLE001
-                console.log(f"[red]Error running pipeline: {exc}")
-                messagebox.showerror("Pipeline error", str(exc))
-            finally:
                 self.status_var.set("Ready")
+
+            self.after(0, handle_success)
 
         self.status_var.set(f"Running {stage}...")
         self._queue_log(f"{stage.upper()} engaged. Cue the keytar solo!")
