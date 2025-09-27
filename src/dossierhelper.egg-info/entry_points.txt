@@ -1,0 +1,2 @@
+[console_scripts]
+dossierhelper = dossierhelper.gui:main

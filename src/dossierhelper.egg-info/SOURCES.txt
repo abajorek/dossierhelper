@@ -1,0 +1,15 @@
+README.md
+pyproject.toml
+src/dossierhelper/__init__.py
+src/dossierhelper/classifier.py
+src/dossierhelper/config.py
+src/dossierhelper/gui.py
+src/dossierhelper/metadata.py
+src/dossierhelper/pipeline.py
+src/dossierhelper/text.py
+src/dossierhelper.egg-info/PKG-INFO
+src/dossierhelper.egg-info/SOURCES.txt
+src/dossierhelper.egg-info/dependency_links.txt
+src/dossierhelper.egg-info/entry_points.txt
+src/dossierhelper.egg-info/requires.txt
+src/dossierhelper.egg-info/top_level.txt
