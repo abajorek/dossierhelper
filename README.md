@@ -18,7 +18,8 @@ A macOS-focused helper application to discover, classify, and report on tenure a
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
-   python3 -m pip install -e .[mac]
+   # If you use zsh, remember to quote the extras specifier to avoid globbing.
+   python3 -m pip install -e '.[mac]'
    ```
 
 3. Launch the GUI:
