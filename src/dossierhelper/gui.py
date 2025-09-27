@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Optional
+
+import platform
+import sys
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 
@@ -106,7 +109,22 @@ class Application(tk.Tk):
         threading.Thread(target=worker, daemon=True).start()
 
 
+def _ensure_supported_environment() -> None:
+    """Validate that the application is running on a supported platform."""
+
+    if sys.version_info < (3, 10):
+        raise SystemExit(
+            "Dossier Helper requires Python 3.10 or newer. Please upgrade Python before launching the app."
+        )
+
+    if platform.system() != "Darwin":
+        console.log(
+            "[yellow]Dossier Helper is optimized for macOS. Some functionality, such as Finder tag integration, may be unavailable on this platform."
+        )
+
+
 def main() -> None:
+    _ensure_supported_environment()
     app = Application()
     app.mainloop()
 

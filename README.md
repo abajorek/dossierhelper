@@ -16,9 +16,9 @@ A macOS-focused helper application to discover, classify, and report on tenure a
 2. Clone this repository and install dependencies:
 
    ```bash
-   python -m venv .venv
+   python3 -m venv .venv
    source .venv/bin/activate
-   pip install -e .[mac]
+   python3 -m pip install -e .[mac]
    ```
 
 3. Launch the GUI:
