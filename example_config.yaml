@@ -1,0 +1,22 @@
+search_roots:
+  - ~/Documents/Dossier
+  - ~/Desktop
+ignored_directories:
+  - .git
+  - node_modules
+extensions:
+  teaching:
+    - .pdf
+    - .docx
+    - .pages
+  service:
+    - .pdf
+    - .xlsx
+metadata:
+  author: "Your Name"
+  campus_roles:
+    - Director of Bands
+    - Advisor
+reporting:
+  output_directory: ~/Documents/DossierReports
+  include_text_snippets: true
