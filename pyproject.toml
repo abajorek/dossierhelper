@@ -45,8 +45,3 @@ all = [
 [project.scripts]
 dossierhelper = "dossierhelper.gui:main"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.package-dir]
-"" = "src"
