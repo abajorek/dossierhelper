@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib import resources
 from pathlib import Path
 from queue import Queue, Empty
 from typing import Optional
@@ -19,6 +20,147 @@ from .pipeline import DossierPipeline, ProgressEvent, RunAllResult
 
 console = Console()
 
+
+class OverallProgressMeter(tk.Frame):
+    """Canvas-based overall progress meter with Strong Bad-approved theming."""
+
+    def __init__(self, master: tk.Misc) -> None:
+        super().__init__(master)
+        self.columnconfigure(0, weight=1)
+
+        self._load_images()
+
+        self.canvas = tk.Canvas(self, height=150, width=620, bg="#fff9ec", highlightthickness=0)
+        self.canvas.grid(row=0, column=0, sticky="ew")
+
+        self.status_var = tk.StringVar(value="🍋 Lemonade stand is open for business!")
+        self.status_label = tk.Label(self, textvariable=self.status_var, font=('Monaco', 10), justify='center')
+        self.status_label.grid(row=1, column=0, sticky="ew", pady=(6, 0))
+
+        self._track_start = 110
+        self._track_end = 510
+        self._track_y = 95
+
+        self._draw_static_elements()
+        self.reset()
+
+    def _load_images(self) -> None:
+        """Load lemonade stand, duck frames, and grape images from assets."""
+
+        def load_asset(filename: str, subsample: int = 2) -> tk.PhotoImage:
+            asset = resources.files("dossierhelper.assets") / filename
+            with resources.as_file(asset) as path:
+                image = tk.PhotoImage(file=str(path))
+            if subsample > 1:
+                image = image.subsample(subsample, subsample)
+            return image
+
+        self.lemonade_image = load_asset("lemonade_stand.ppm", subsample=2)
+        self.grapes_image = load_asset("grapes.ppm", subsample=2)
+
+        duck_frames = [
+            "duck_left.ppm",
+            "duck_left2.ppm",
+            "duck_mid.ppm",
+            "duck_right.ppm",
+            "duck_right2.ppm",
+            "duck_right.ppm",
+            "duck_mid.ppm",
+            "duck_left2.ppm",
+        ]
+        self.duck_frames = [load_asset(name, subsample=2) for name in duck_frames]
+
+    def _draw_static_elements(self) -> None:
+        """Create the static canvas elements for the progress meter."""
+
+        self.canvas.delete("all")
+        # Track and decorations
+        self.canvas.create_line(
+            self._track_start,
+            self._track_y,
+            self._track_end,
+            self._track_y,
+            width=14,
+            fill="#d9a066",
+            capstyle=tk.ROUND,
+        )
+        self.canvas.create_line(
+            self._track_start,
+            self._track_y + 12,
+            self._track_end,
+            self._track_y + 12,
+            width=4,
+            fill="#f7d7a2",
+            capstyle=tk.ROUND,
+        )
+
+        # Start and finish images
+        self.canvas.create_image(self._track_start - 70, self._track_y - 10, image=self.lemonade_image)
+        self.canvas.create_text(
+            self._track_start - 70,
+            self._track_y + 45,
+            text="0%",
+            font=('TkDefaultFont', 10, 'bold'),
+            fill="#3b2e1a",
+        )
+        self.canvas.create_image(self._track_end + 70, self._track_y - 10, image=self.grapes_image)
+        self.canvas.create_text(
+            self._track_end + 70,
+            self._track_y + 45,
+            text="100%",
+            font=('TkDefaultFont', 10, 'bold'),
+            fill="#3b2e1a",
+        )
+
+        self.percentage_text_id = self.canvas.create_text(
+            (self._track_start + self._track_end) / 2,
+            28,
+            text="0%",
+            font=('Helvetica', 18, 'bold'),
+            fill="#3b2e1a",
+        )
+
+        self.canvas.create_text(
+            (self._track_start + self._track_end) / 2,
+            52,
+            text="Duck Progress Patrol",
+            font=('TkDefaultFont', 10, 'bold'),
+            fill="#7f5f2a",
+        )
+
+        self.duck_id = self.canvas.create_image(self._track_start, self._track_y - 22, image=self.duck_frames[0])
+
+    def reset(self) -> None:
+        """Return the duck to the lemonade stand and reset text."""
+
+        self.update_meter(0.0)
+
+    def update_meter(self, percentage: float) -> None:
+        """Move the duck along the track and update the status messaging."""
+
+        clamped = max(0.0, min(100.0, percentage))
+        duck_x = self._track_start + ((self._track_end - self._track_start) * (clamped / 100.0))
+        self.canvas.coords(self.duck_id, duck_x, self._track_y - 22)
+
+        frame_index = int(clamped / 5) % len(self.duck_frames)
+        self.canvas.itemconfigure(self.duck_id, image=self.duck_frames[frame_index])
+
+        if clamped.is_integer():
+            pct_label = f"{int(clamped)}%"
+        else:
+            pct_label = f"{clamped:4.1f}%"
+        self.canvas.itemconfigure(self.percentage_text_id, text=pct_label)
+
+        if clamped <= 0.5:
+            self.status_var.set("🍋 Lemonade stand is open for business!")
+        elif clamped >= 100:
+            self.status_var.set("🍇 Grape victory! JORB WELL DONE!")
+        elif clamped < 50:
+            self.status_var.set("🦆 Waddling through the quad like Strong Bad ordered!")
+        elif clamped < 90:
+            self.status_var.set("🦆 Duck wobble intensifies – academic glory ahead!")
+        else:
+            self.status_var.set("🍇 Almost grape time! Prep the celebration confetti!")
 
 class Application(tk.Tk):
     def __init__(self) -> None:
@@ -71,15 +213,14 @@ class Application(tk.Tk):
         self.progress_bar = ttk.Progressbar(self, variable=self.progress_var, maximum=100)
         self.progress_bar.grid(row=6, column=0, columnspan=3, padx=8, pady=(4, 2), sticky="ew")
         
-        # ASCII Art Progress Display
-        self.ascii_progress_var = tk.StringVar(value="")
-        self.ascii_progress_label = tk.Label(self, textvariable=self.ascii_progress_var, font=('Monaco', 10), justify='center')
-        self.ascii_progress_label.grid(row=7, column=0, columnspan=3, padx=8, pady=(2, 2), sticky="ew")
+        # Deluxe graphical progress display
+        self.overall_progress_meter = OverallProgressMeter(self)
+        self.overall_progress_meter.grid(row=7, column=0, columnspan=3, padx=8, pady=(2, 6), sticky="ew")
         
         # Per-file progress bar
         tk.Label(self, text="Current File Progress:", font=('TkDefaultFont', 9)).grid(row=8, column=0, sticky="w", padx=8)
         self.file_progress_var = tk.DoubleVar()
-        self.file_progress_bar = ttk.Progressbar(self, variable=self.file_progress_var, maximum=100)
+        self.file_progress_bar = ttk.Progressbar(self, variable=self.file_progress_var, maximum=100, mode="determinate")
         self.file_progress_bar.grid(row=8, column=1, columnspan=2, padx=8, pady=(2, 2), sticky="ew")
         
         # Current file label
@@ -171,7 +312,7 @@ class Application(tk.Tk):
                     messagebox.showerror("Pipeline error", str(exc))
                     self.status_var.set("Ready")
                     self.progress_var.set(0)
-                    self.ascii_progress_var.set("")
+                    self.overall_progress_meter.reset()
                     self.file_progress_var.set(0)
                     self.current_file_var.set("")
 
@@ -211,7 +352,7 @@ class Application(tk.Tk):
                     )
                 self.status_var.set("Ready")
                 self.progress_var.set(100)  # Show completion
-                self.ascii_progress_var.set(self._generate_ascii_progress_bar(100))
+                self.overall_progress_meter.update_meter(100)
                 self.file_progress_var.set(100)
                 self.current_file_var.set("🎉 Operation completed successfully!")
 
@@ -247,64 +388,10 @@ class Application(tk.Tk):
                     self._queue_log(f"☁️ Google Drive scanning enabled for: {', '.join(enabled_drives)}")
         
         self.progress_var.set(0)
-        self.ascii_progress_var.set(self._generate_ascii_progress_bar(0))
+        self.overall_progress_meter.reset()
         self.file_progress_var.set(0)
         self.current_file_var.set("⏳ Initializing...")
         threading.Thread(target=worker, daemon=True).start()
-
-    def _generate_ascii_progress_bar(self, percentage: float) -> str:
-        """Generate ASCII progress bar with duck animation."""
-        
-        # Duck animation frames for smoother movement
-        duck_frames = [
-            "> o)",   # Frame 1: Duck facing right
-            ">o) ",   # Frame 2: Slightly different
-            "> o)",   # Frame 3: Back to original
-            "(o <",   # Frame 4: Duck turning around
-            "< o(",   # Frame 5: Duck facing left
-            "(o <",   # Frame 6: Back to turning
-        ]
-        
-        # Calculate duck position and animation frame
-        bar_length = 48  # Slightly shorter for better fit
-        duck_pos = max(0, min(bar_length - 4, int((percentage / 100) * (bar_length - 4))))
-        duck_frame = int(percentage / 3) % len(duck_frames)  # Change frame every 3%
-        duck = duck_frames[duck_frame]
-        
-        # Build progress bar with duck placement
-        filled = int((percentage / 100) * bar_length)
-        bar_chars = []
-        
-        duck_placed = False
-        for i in range(bar_length):
-            if i >= duck_pos and i < duck_pos + 4 and percentage > 0 and not duck_placed:
-                # Place the duck
-                for j, char in enumerate(duck):
-                    if i + j < bar_length:
-                        bar_chars.append(char)
-                    i += 1
-                duck_placed = True
-                i -= 1  # Adjust for the loop increment
-            elif i < filled and (not duck_placed or i < duck_pos or i >= duck_pos + 4):
-                bar_chars.append("█")  # Filled character
-            else:
-                bar_chars.append("░")  # Empty character
-        
-        # Trim to exact length and join
-        bar = ''.join(bar_chars[:bar_length])
-        
-        # Create the complete display with proper spacing
-        if percentage < 5:
-            progress_line = f"[LS] {bar} [{percentage:5.1f}%]"
-        elif percentage >= 100:
-            # Victory display with grape
-            progress_line = f"[LS] {bar} [GR] [{percentage:5.1f}%] JORB WELL DONE!"
-        elif percentage >= 95:
-            progress_line = f"[LS] {bar} [GR] [{percentage:5.1f}%] Almost grape time!"
-        else:
-            progress_line = f"[LS] {bar} [{percentage:5.1f}%]"
-        
-        return progress_line
     
     def _get_file_size_taunt(self, file_path: Path) -> str:
         """Get size-based RedLetterMedia/Homestar Runner taunts."""
@@ -426,15 +513,16 @@ class Application(tk.Tk):
         
         # Calculate and display overall percentage
         percentage = 0.0
-        if event.scanned_count is not None and event.total_candidates is not None:
-            percentage = (event.scanned_count / event.total_candidates) * 100
-            
-            # Update overall progress bar
+        if event.scanned_count is not None and event.total_candidates:
+            completed_items = float(event.scanned_count)
+            if event.file_progress_percentage is not None:
+                completed_items = max(0.0, float(event.scanned_count - 1))
+                completed_items += max(0.0, min(100.0, event.file_progress_percentage)) / 100.0
+            percentage = min(100.0, (completed_items / event.total_candidates) * 100)
+
+            # Update overall progress visuals
             self.progress_var.set(percentage)
-            
-            # Update ASCII art progress bar with duck
-            ascii_bar = self._generate_ascii_progress_bar(percentage)
-            self.ascii_progress_var.set(ascii_bar)
+            self.overall_progress_meter.update_meter(percentage)
         
         # Update per-file progress (now using real progress data!)
         if event.file_progress_percentage is not None and event.file_progress_step:
