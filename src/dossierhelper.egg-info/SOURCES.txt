@@ -14,3 +14,11 @@ src/dossierhelper.egg-info/dependency_links.txt
 src/dossierhelper.egg-info/entry_points.txt
 src/dossierhelper.egg-info/requires.txt
 src/dossierhelper.egg-info/top_level.txt
+src/dossierhelper/assets/__init__.py
+src/dossierhelper/assets/duck_left.ppm
+src/dossierhelper/assets/duck_left2.ppm
+src/dossierhelper/assets/duck_mid.ppm
+src/dossierhelper/assets/duck_right.ppm
+src/dossierhelper/assets/duck_right2.ppm
+src/dossierhelper/assets/grapes.ppm
+src/dossierhelper/assets/lemonade_stand.ppm
