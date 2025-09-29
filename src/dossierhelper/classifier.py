@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Collection, Iterable, Optional
 
 from dateutil import parser as date_parser
 
@@ -79,12 +79,18 @@ def classify(path: Path, *, metadata: Optional[dict[str, str]] = None, text: Opt
     return None
 
 
-def filter_by_year(paths: Iterable[Path], *, year: Optional[int], metadata_lookup: callable[[Path], dict[str, str]]) -> list[Path]:
+def filter_by_year(
+    paths: Iterable[Path],
+    *,
+    years: Optional[Collection[int]],
+    metadata_lookup: callable[[Path], dict[str, str]],
+) -> list[Path]:
     """Filter artifacts using creation year metadata or filesystem timestamps."""
 
-    if year is None:
+    if not years:
         return list(paths)
 
+    year_set = set(years)
     filtered: list[Path] = []
     for path in paths:
         info = metadata_lookup(path)
@@ -92,13 +98,13 @@ def filter_by_year(paths: Iterable[Path], *, year: Optional[int], metadata_looku
         if not date_str:
             stat = path.stat()
             created = datetime.fromtimestamp(stat.st_ctime)
-            if created.year == year:
+            if created.year in year_set:
                 filtered.append(path)
             continue
         try:
             parsed_date = date_parser.parse(str(date_str))
         except (ValueError, TypeError):
             continue
-        if parsed_date.year == year:
+        if parsed_date.year in year_set:
             filtered.append(path)
     return filtered

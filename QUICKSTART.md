@@ -133,11 +133,11 @@ Each file goes through:
 
 ## 🎮 Tips & Tricks
 
-### Scan Specific Year
+### Scan Specific Years
 ```
-Limit to calendar year: 2024
+Limit to calendar years: [2023] [2024]
 ```
-Only processes files from that year.
+Only processes files from the selected years.
 
 ### Run Individual Passes
 - **Pass 1**: Fast surface scan (discover files)
