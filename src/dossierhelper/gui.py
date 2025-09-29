@@ -27,7 +27,6 @@ class Application(tk.Tk):
         self.geometry("900x650")
         self.config = DEFAULT_CONFIG
         self.pipeline = DossierPipeline(self.config)
-        self.selected_year: Optional[int] = None
         self.log_queue: "Queue[str]" = Queue()
         self._build_widgets()
         self._poll_log_queue()
@@ -49,10 +48,15 @@ class Application(tk.Tk):
             justify="left",
         ).grid(row=1, column=0, columnspan=3, padx=8, pady=(0, 8), sticky="w")
 
-        tk.Label(self, text="Limit to calendar year").grid(row=2, column=0, padx=8, pady=8, sticky="w")
-        self.year_var = tk.StringVar()
-        self.year_entry = tk.Entry(self, textvariable=self.year_var)
-        self.year_entry.grid(row=2, column=1, padx=8, pady=8, sticky="ew")
+        tk.Label(self, text="Limit to calendar years").grid(row=2, column=0, padx=8, pady=8, sticky="w")
+        self.year_vars: dict[int, tk.BooleanVar] = {}
+        year_frame = tk.Frame(self)
+        year_frame.grid(row=2, column=1, columnspan=2, padx=8, pady=8, sticky="w")
+        for idx, year in enumerate(range(2021, 2026)):
+            var = tk.BooleanVar(value=False)
+            chk = tk.Checkbutton(year_frame, text=str(year), variable=var)
+            chk.grid(row=0, column=idx, padx=(0 if idx == 0 else 6, 0))
+            self.year_vars[year] = var
 
         tk.Button(self, text="Run Pass 1", command=self._run_pass_one).grid(row=3, column=0, padx=8, pady=8, sticky="ew")
         tk.Button(self, text="Run Pass 2", command=self._run_pass_two).grid(row=3, column=1, padx=8, pady=8, sticky="ew")
@@ -110,20 +114,14 @@ class Application(tk.Tk):
             self._queue_log("🔧 All systems go for premium academic document detection and classification!")
             self._queue_log("🎯 Ready to unleash the power of organized scholarship upon your file system!")
 
-    def _resolve_year(self) -> Optional[int]:
-        value = self.year_var.get().strip()
-        if not value:
-            return None
-        try:
-            return int(value)
-        except ValueError:
-            messagebox.showerror("Invalid year", "Please enter a valid year (e.g., 2023)")
-            return None
+    def _resolve_years(self) -> Optional[set[int]]:
+        selected = {year for year, var in self.year_vars.items() if var.get()}
+        return selected or None
 
     def _run_pass_one(self) -> None:
         self._run_async(
             lambda: self.pipeline.pass_one_surface_scan(
-                year=self._resolve_year(),
+                years=self._resolve_years(),
                 progress_callback=self._queue_progress,
             ),
             stage="pass1",
@@ -156,7 +154,7 @@ class Application(tk.Tk):
     def _run_all(self) -> None:
         self._run_async(
             lambda: self.pipeline.run_all(
-                year=self._resolve_year(),
+                years=self._resolve_years(),
                 progress_callback=self._queue_progress,
             ),
             stage="all",

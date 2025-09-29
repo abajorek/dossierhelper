@@ -7,7 +7,7 @@ import tempfile
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Iterable, Iterator, List, Optional, Union
+from typing import Callable, Collection, Iterable, Iterator, List, Optional, Union
 
 from time import perf_counter
 
@@ -166,7 +166,7 @@ class DossierPipeline:
     def pass_one_surface_scan(
         self,
         *,
-        year: Optional[int] = None,
+        years: Optional[Collection[int]] = None,
         progress_callback: Optional[Callable[[ProgressEvent], None]] = None,
     ) -> List[Artifact]:
         console.log("Starting pass one (surface scan)...")
@@ -235,14 +235,15 @@ class DossierPipeline:
                     console.log(f"[red]Error scanning Google Drive '{drive_config.name}': {e}")
         
         # Filter by year if specified
-        if year:
+        if years:
+            year_set = set(years)
             filtered_artifacts = []
             for artifact in artifacts:
                 if not artifact.is_gdrive:
                     # Use existing year filter for local files
                     if artifact.path in classifier.filter_by_year(
                         [artifact.path],
-                        year=year,
+                        years=year_set,
                         metadata_lookup=lambda p: gather_metadata(p).raw
                     ):
                         filtered_artifacts.append(artifact)
@@ -250,7 +251,7 @@ class DossierPipeline:
                     # For Google Drive files, check modified time
                     if artifact.gdrive_file:
                         modified_year = int(artifact.gdrive_file.modified_time[:4])
-                        if modified_year == year:
+                        if modified_year in year_set:
                             filtered_artifacts.append(artifact)
             artifacts = filtered_artifacts
         
@@ -484,11 +485,11 @@ class DossierPipeline:
     def run_all(
         self,
         *,
-        year: Optional[int] = None,
+        years: Optional[Collection[int]] = None,
         apply_tags: bool = True,
         progress_callback: Optional[Callable[[ProgressEvent], None]] = None,
     ) -> RunAllResult:
-        artifacts = self.pass_one_surface_scan(year=year, progress_callback=progress_callback)
+        artifacts = self.pass_one_surface_scan(years=years, progress_callback=progress_callback)
         enriched = self.pass_two_deep_analysis(
             artifacts,
             apply_tags=apply_tags,
@@ -498,9 +499,12 @@ class DossierPipeline:
         if self.config.reporting:
             output_dir = self.config.reporting.output_directory
             output_dir.mkdir(parents=True, exist_ok=True)
+            year_suffix = "all"
+            if years:
+                year_suffix = "-".join(str(y) for y in sorted(set(years)))
             reporting_path = self.pass_three_report(
                 enriched,
-                output=output_dir / f"dossier_report_{year or 'all'}.csv",
+                output=output_dir / f"dossier_report_{year_suffix}.csv",
                 progress_callback=progress_callback,
             )
         else:
