@@ -3,6 +3,7 @@ pyproject.toml
 src/dossierhelper/__init__.py
 src/dossierhelper/classifier.py
 src/dossierhelper/config.py
+src/dossierhelper/gdrive.py
 src/dossierhelper/gui.py
 src/dossierhelper/metadata.py
 src/dossierhelper/pipeline.py

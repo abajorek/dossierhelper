@@ -2,15 +2,46 @@
 
 A macOS-focused helper application to discover, classify, and report on tenure and promotion dossier artifacts.
 
+## ✨ What's New
+
+### ☁️ Google Drive Integration
+- **Multi-Drive Support**: Scan files from 2+ Google Drive accounts simultaneously
+- **Cloud + Local**: Process both local files and cloud storage in a single workflow
+- **Real-Time Download Progress**: See byte-by-byte download progress for cloud files
+- See [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md) for setup instructions
+
+### 📊 Individual File Progress Meter
+- **Real Progress Tracking**: 0-100% progress for each file with step-by-step updates
+- **Detailed Steps**: See exactly what's happening (Loading, Extracting, Classifying, Tagging)
+- **Download Progress**: For Google Drive files, see exact bytes downloaded
+- **Visual Feedback**: Progress bar with emoji indicators for each step
+
+See [docs/NEW_FEATURES.md](docs/NEW_FEATURES.md) for complete details!
+
 ## Features
 
 * **Three-pass discovery pipeline** that starts with a fast surface scan, performs deeper metadata and text extraction, and culminates in a detailed reporting pass.
-* **Rule-based classification** driven by the unit-provided tenure & promotion matrix for Teaching, Service, Advising, Forms, and Scholarly/Creative artifacts.
+* **Pattern-based classification** using regex matching for Teaching, Scholarship, Service, Research, and Administration categories.
+* **Google Drive integration** to scan and process files from multiple cloud storage accounts.
+* **Real-time progress tracking** with overall and per-file progress meters showing detailed processing steps.
 * **macOS Finder tag integration** to apply consistent color/label tags that mirror dossier destinations.
-* **Tkinter desktop UI** that allows you to choose search roots, limit scans by calendar year, launch each pass individually or in sequence, and watch a progress console full of dossier stats and delightfully retro quips.
+* **Tkinter desktop UI** with dual progress bars, ASCII art duck animation, and entertaining commentary.
 * **Extensible metadata extraction** with hooks for Spotlight (`mdls`) data, PDF text parsing, and custom author-hour annotations.
 
 ## Getting Started
+
+### Quick Install
+
+Use the installation script for an interactive setup:
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+Or install manually:
+
+### Manual Installation
 
 1. Install Python 3.10+ on macOS.
 2. Clone this repository and install dependencies:
@@ -18,25 +49,134 @@ A macOS-focused helper application to discover, classify, and report on tenure a
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
-   # If you use zsh, remember to quote the extras specifier to avoid globbing.
-   python3 -m pip install -e '.[mac]'
+   
+   # Basic installation (local files only)
+   pip install -e .
+   
+   # With macOS Finder tags support
+   pip install -e '.[mac]'
+   
+   # With Google Drive support
+   pip install -e '.[gdrive]'
+   
+   # With everything (macOS + Google Drive)
+   pip install -e '.[all]'
    ```
 
 3. Launch the GUI:
 
    ```bash
    dossierhelper
+   # or
+   python run_dossierhelper.py
    ```
+
+### Google Drive Setup (Optional)
+
+To enable Google Drive integration:
+
+1. Install Google Drive dependencies: `pip install -e '.[gdrive]'`
+2. Follow the setup guide: [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md)
+3. Configure your drives in `example_config.yaml`
+4. Run Dossier Helper - you'll be prompted to authenticate (first time only)
 
 ## Configuration
 
-The application loads optional YAML configuration files that define search roots, ignored directories, and author metadata. A bundled `example_config.yaml` is applied by default in the GUI so you have a ready-to-go starting point, and you can swap in your own file at any time. See [`example_config.yaml`](example_config.yaml) for the template contents.
+The application loads optional YAML configuration files that define:
+- **Search roots**: Local directories to scan
+- **Categories and patterns**: Classification rules for different document types
+- **File filters**: Extensions and directories to include/exclude
+- **Google Drives**: Cloud storage accounts to scan (optional)
+- **macOS settings**: Finder tag colors and preferences
+- **Scoring**: Weights and bonus keywords for classification
+
+A bundled `example_config.yaml` is applied by default in the GUI so you have a ready-to-go starting point, and you can swap in your own file at any time. See [`example_config.yaml`](example_config.yaml) for the template contents.
+
+### Example: Adding Google Drive
+
+```yaml
+google_drives:
+  - name: "personal"
+    enabled: true
+    folder_id: null  # Scan entire drive
+    client_secrets_file: "~/.dossierhelper/personal_credentials.json"
+  
+  - name: "work"
+    enabled: true
+    folder_id: "1aB2cD3eF..."  # Specific folder only
+    client_secrets_file: "~/.dossierhelper/work_credentials.json"
+```
+
+## Documentation
+
+- **[New Features Guide](docs/NEW_FEATURES.md)** - Overview of Google Drive integration and individual file progress
+- **[Google Drive Setup](docs/GOOGLE_DRIVE_SETUP.md)** - Step-by-step OAuth setup and configuration
+- **[Configuration Reference](example_config.yaml)** - Complete configuration template with comments
+
+## How It Works
+
+### Three-Pass Pipeline
+
+1. **Pass 1 - Surface Scan**: Fast discovery of candidate files from local directories and Google Drives
+2. **Pass 2 - Deep Analysis**: Download (if needed), extract text, classify, and tag each file
+3. **Pass 3 - Report**: Generate comprehensive CSV report of all artifacts
+
+### Progress Tracking
+
+- **Overall Progress**: Duck animation swimming from Lemonade Stand [LS] to Grape [GR]
+- **Per-File Progress**: Real-time 0-100% progress with step indicators:
+  - 📂 Loading file (0-30%)
+  - 📋 Reading metadata (30-45%)
+  - 📄 Extracting text (45-70%)
+  - 🔍 Classifying document (70-85%)
+  - ⏱️ Estimating effort (85-90%)
+  - 🏷️ Applying Finder tags (90-100%)
+  - 🎉 Complete!
+
+### Entertainment Features
+
+- RedLetterMedia commentary ("How embarrassing!", "OH MY GAAAWD!")
+- Homestar Runner references ("JORB WELL DONE!", "The Cheat is grounded!")
+- File size taunts for large and tiny files
+- Stage-specific celebrations and motivation
+- 25% chance of random commentary per file
 
 ## Development Notes
 
 * The GUI and pipeline code were designed for macOS Monterey and newer.
 * Text extraction relies on `pdfminer.six` when available; additional extractors can be registered in `dossierhelper/text.py`.
 * Finder tag updates require `pyobjc` so the tool can call the Cocoa APIs for tagging. When tags cannot be written, the pipeline logs a warning and continues.
+* Google Drive integration uses `google-api-python-client` for OAuth authentication and file access.
+* Progress tracking is multi-threaded to keep the UI responsive during processing.
+
+## Privacy & Security
+
+- **Local Processing**: All file processing happens on your machine
+- **Read-Only**: Google Drive access is read-only; files are never modified
+- **Secure Auth**: OAuth 2.0 authentication with encrypted token storage
+- **No Data Sharing**: Your files stay between you and Google/your machine
+- **Revocable**: Easy to revoke access at any time through Google Account settings
+
+## Troubleshooting
+
+### "Google Drive support not available"
+Install Google Drive dependencies: `pip install -e '.[gdrive]'`
+
+### "Failed to authenticate Google Drive"
+Check that:
+1. OAuth credentials file exists at the specified path
+2. Google Drive API is enabled in Google Cloud Console
+3. OAuth consent screen is properly configured
+
+See [docs/GOOGLE_DRIVE_SETUP.md](docs/GOOGLE_DRIVE_SETUP.md) for detailed troubleshooting.
+
+## Contributing
+
+Contributions are welcome! Key areas:
+- Additional file format support (music notation, drill design, etc.)
+- Enhanced classification patterns
+- Performance optimizations
+- Platform-specific integrations
 
 ## License
 

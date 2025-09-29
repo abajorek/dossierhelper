@@ -20,6 +20,23 @@ dependencies = [
 mac = [
     "pyobjc>=9.0",
 ]
+gdrive = [
+    "google-api-python-client>=2.100.0",
+    "google-auth-httplib2>=0.1.1",
+    "google-auth-oauthlib>=1.1.0",
+]
+all = [
+    "pyobjc>=9.0",
+    "google-api-python-client>=2.100.0",
+    "google-auth-httplib2>=0.1.1",
+    "google-auth-oauthlib>=1.1.0",
+]
 
 [project.scripts]
 dossierhelper = "dossierhelper.gui:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
